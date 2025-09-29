@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendário do Cabelo</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom styles for a better look and feel */
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+        .calendar-day, .calendar-header {
+            aspect-ratio: 1 / 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.75rem; /* smaller font for more calendars */
+        }
+        .wash-day {
+            background-color: #3b82f6; /* bg-blue-500 */
+            color: white;
+            border-radius: 50%;
+            font-weight: 700;
+        }
+        /* Fade-in animation for results */
+        #results-container {
+            display: none;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9; /* slate-100 */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #94a3b8; /* slate-400 */
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b; /* slate-500 */
+        }
+        /* Hide number input arrows */
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <div class="min-h-screen container mx-auto p-4 sm:p-6 md:p-8 flex flex-col items-center">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-blue-600">Calendário do Cabelo</h1>
+            <p class="text-slate-500 mt-2">Digite o ano e veja a programação completa de lavagem.</p>
+        </header>
+
+        <!-- Input Section -->
+        <div class="w-full max-w-md bg-white p-6 rounded-2xl shadow-lg border border-slate-200 mb-8">
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <div class="flex-1 max-w-xs mx-auto">
+                    <label for="year-input" class="block text-sm font-medium text-slate-600 mb-1">Ano</label>
+                    <input type="number" id="year-input" placeholder="Digite o ano" class="w-full text-center p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                </div>
+            </div>
+            <button id="calculate-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg mt-6 hover:bg-blue-700 active:scale-95 transition-transform duration-150 shadow-md hover:shadow-lg">
+                Gerar Calendário Anual
+            </button>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results-container" class="w-full max-w-7xl">
+            <!-- Tabs for different views -->
+            <div class="mb-4 border-b border-slate-200 sticky top-0 bg-slate-50/80 backdrop-blur-sm z-10">
+                <nav class="flex -mb-px" aria-label="Tabs">
+                    <button data-tab="calendar" class="tab-btn w-1/3 py-4 px-1 text-center border-b-2 font-medium text-sm text-blue-600 border-blue-600">
+                        Calendários
+                    </button>
+                    <button data-tab="list" class="tab-btn w-1/3 py-4 px-1 text-center border-b-2 font-medium text-sm text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-300">
+                        Lista Anual
+                    </button>
+                    <button data-tab="table" class="tab-btn w-1/3 py-4 px-1 text-center border-b-2 font-medium text-sm text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-300">
+                        Tabelas
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Content for each tab -->
+            <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-lg border border-slate-200">
+                <!-- Calendar View -->
+                <div id="calendar-view" class="tab-content">
+                    <div id="calendar-wrapper" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        <!-- Calendars will be inserted here -->
+                    </div>
+                </div>
+
+                <!-- List View -->
+                <div id="list-view" class="tab-content hidden">
+                     <div id="list-wrapper" class="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+                        <!-- Annual list will be inserted here -->
+                     </div>
+                </div>
+
+                <!-- Table View -->
+                <div id="table-view" class="tab-content hidden">
+                     <div id="table-wrapper" class="space-y-8">
+                        <!-- Tables will be inserted here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM Elements ---
+            const yearInput = document.getElementById('year-input');
+            const calculateBtn = document.getElementById('calculate-btn');
+            const resultsContainer = document.getElementById('results-container');
+            const calendarWrapper = document.getElementById('calendar-wrapper');
+            const listWrapper = document.getElementById('list-wrapper');
+            const tableWrapper = document.getElementById('table-wrapper');
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            // --- Initial Setup ---
+            const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+            const weekdays = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+            const weekdaysShort = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+            
+            // Set default year to 2025 as it's the reference year
+            yearInput.value = 2025;
+
+            // --- Core Logic ---
+            const getWashDaysForYear = (year) => {
+                // Anchor date: October 4, 2025, as per the new logic.
+                const anchorDate = new Date(Date.UTC(2025, 9, 4)); // Mês é 0-indexado (9 = Outubro)
+                const washInterval = 4; // Wash every 4 days
+
+                const allWashDays = {};
+                for(let i = 0; i < 12; i++) allWashDays[i] = [];
+
+                let currentDate = new Date(anchorDate);
+                const targetYearStartDate = new Date(Date.UTC(year, 0, 1));
+                
+                // Navigate from the anchor date to a wash day within the target year
+                while (currentDate.getUTCFullYear() > year) {
+                    currentDate.setUTCDate(currentDate.getUTCDate() - washInterval);
+                }
+                while (currentDate.getUTCFullYear() < year) {
+                    currentDate.setUTCDate(currentDate.getUTCDate() + washInterval);
+                }
+
+                // Now that we are in the correct year, go back until we find the last wash day BEFORE this year started
+                while (currentDate >= targetYearStartDate) {
+                    currentDate.setUTCDate(currentDate.getUTCDate() - washInterval);
+                }
+
+                // Move to the first wash day OF the target year
+                currentDate.setUTCDate(currentDate.getUTCDate() + washInterval);
+
+                // Generate all wash days for the entire target year
+                while (currentDate.getUTCFullYear() === year) {
+                    const month = currentDate.getUTCMonth();
+                    allWashDays[month].push(new Date(currentDate));
+                    currentDate.setUTCDate(currentDate.getUTCDate() + washInterval);
+                }
+                
+                return allWashDays;
+            };
+
+            // --- Rendering Functions ---
+            const renderAll = (year) => {
+                const washDaysByMonth = getWashDaysForYear(year);
+                renderAllCalendars(washDaysByMonth, year);
+                renderAnnualList(washDaysByMonth, year);
+                renderAllTables(washDaysByMonth, year);
+                resultsContainer.style.display = 'block';
+            };
+
+            const renderAllCalendars = (washDaysByMonth, year) => {
+                calendarWrapper.innerHTML = '';
+                months.forEach((monthName, monthIndex) => {
+                    const monthContainer = document.createElement('div');
+                    monthContainer.className = 'p-3 rounded-lg border border-slate-200 bg-slate-50/50';
+
+                    const washDayNumbers = washDaysByMonth[monthIndex].map(d => d.getUTCDate());
+                    const firstDayOfMonth = new Date(year, monthIndex, 1).getDay();
+                    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+
+                    let calendarHTML = `<h3 class="text-base font-bold text-center mb-3 text-blue-600">${monthName}</h3>`;
+                    calendarHTML += `<div class="calendar-grid text-slate-500 font-medium mb-1">`;
+                    weekdaysShort.forEach(day => { calendarHTML += `<div>${day}</div>`; });
+                    calendarHTML += `</div>`;
+                    
+                    calendarHTML += `<div class="calendar-grid">`;
+                    for (let i = 0; i < firstDayOfMonth; i++) calendarHTML += '<div></div>';
+                    for (let day = 1; day <= daysInMonth; day++) {
+                        const isWashDay = washDayNumbers.includes(day) ? ' wash-day' : '';
+                        calendarHTML += `<div class="calendar-day${isWashDay}">${day}</div>`;
+                    }
+                    calendarHTML += `</div>`;
+                    
+                    monthContainer.innerHTML = calendarHTML;
+                    calendarWrapper.appendChild(monthContainer);
+                });
+            };
+
+            const renderAnnualList = (washDaysByMonth, year) => {
+                listWrapper.innerHTML = '';
+                months.forEach((monthName, monthIndex) => {
+                    const monthWashDays = washDaysByMonth[monthIndex];
+                    if (monthWashDays.length > 0) {
+                        const monthSection = document.createElement('div');
+                        let listHTML = `<h3 class="text-lg font-bold text-slate-700">${monthName} ${year}</h3><div class="space-y-2 mt-2">`;
+                        monthWashDays.forEach(date => {
+                            const day = date.getUTCDate();
+                            const weekday = weekdays[date.getUTCDay()];
+                            listHTML += `<p class="p-3 bg-slate-100 rounded-md">Dia ${day} - ${weekday}</p>`;
+                        });
+                        listHTML += `</div>`;
+                        monthSection.innerHTML = listHTML;
+                        listWrapper.appendChild(monthSection);
+                    }
+                });
+            };
+
+            const renderAllTables = (washDaysByMonth, year) => {
+                tableWrapper.innerHTML = '';
+                 months.forEach((monthName, monthIndex) => {
+                    const monthWashDays = washDaysByMonth[monthIndex];
+                    if (monthWashDays.length > 0) {
+                        const tableContainer = document.createElement('div');
+                        
+                        let tableHTML = `<h3 class="text-lg font-bold text-slate-700">${monthName} ${year}</h3>`;
+                        tableHTML += `<div class="mt-2 overflow-x-auto rounded-lg border border-slate-200">`;
+                        tableHTML += `<table class="min-w-full divide-y divide-slate-200">
+                                        <thead class="bg-slate-50">
+                                            <tr>
+                                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Dia do Mês</th>
+                                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Dia da Semana</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="bg-white divide-y divide-slate-200">`;
+                        monthWashDays.forEach(date => {
+                             const day = date.getUTCDate();
+                             const weekday = weekdays[date.getUTCDay()];
+                             tableHTML += `<tr>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">${day}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${weekday}</td>
+                                          </tr>`;
+                        });
+
+                        tableHTML += `</tbody></table></div>`;
+                        tableContainer.innerHTML = tableHTML;
+                        tableWrapper.appendChild(tableContainer);
+                    }
+                });
+            };
+
+            // --- Event Listeners ---
+            calculateBtn.addEventListener('click', () => {
+                const selectedYear = parseInt(yearInput.value);
+                if (isNaN(selectedYear) || yearInput.value.length < 4) {
+                    alert('Por favor, insira um ano válido com 4 dígitos.');
+                    return;
+                }
+                renderAll(selectedYear);
+            });
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const tabId = button.dataset.tab;
+                    tabButtons.forEach(btn => {
+                        btn.classList.remove('text-blue-600', 'border-blue-600');
+                        btn.classList.add('text-slate-500', 'border-transparent');
+                    });
+                    button.classList.add('text-blue-600', 'border-blue-600');
+                    button.classList.remove('text-slate-500', 'border-transparent');
+                    tabContents.forEach(content => {
+                        content.classList.toggle('hidden', content.id !== `${tabId}-view`);
+                    });
+                });
+            });
+
+            // Trigger calculation on page load for the default year
+            calculateBtn.click();
+        });
+    </script>
+</body>
+</html>
